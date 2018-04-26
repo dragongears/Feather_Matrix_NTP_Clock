@@ -5,7 +5,7 @@
 // This code is released under the Creative Commons Attribution-NonCommercial-ShareAlike 2.5 license.
 // https://creativecommons.org/licenses/by-nc-sa/2.5/
 //
-// Based off of simplestesp8266clock.ino
+// Based on simplestesp8266clock.ino
 // http://www.instructables.com/id/Simplest-ESP8266-Local-Time-Internet-Clock-With-OL/
 //
 // Libraries needed:
