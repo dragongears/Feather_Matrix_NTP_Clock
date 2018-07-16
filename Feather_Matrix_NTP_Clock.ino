@@ -136,6 +136,7 @@ void setup ()
   timeClient.begin();   // Start the NTP UDP client
 
   matrix.begin(0x70);  // pass in the address
+  matrix.setBrightness(8);
   matrix.setTextSize(1);
   matrix.setTextWrap(false);  // we don't want text to wrap so it scrolls nicely
   matrix.setTextColor(LED_ON);
@@ -144,25 +145,24 @@ void setup ()
   matrix.writeDisplay();
   Serial.println(F("16x8 LED Mini Matrix Setup Complete"));
 
-  // Connect to wifi
-  Serial.println("");
-  Serial.print("Connecting to ");
-  Serial.print(ssid);
-
   // Show disconnected icon
   matrix.clear();
   matrix.drawBitmap(4, 0, connect[0], 8, 8, LED_ON);
   matrix.writeDisplay();
 
-  // Connect to WiFi
+  // Connect to wifi
+  Serial.println("");
+  Serial.print(F("Connecting to "));
+  Serial.print(ssid);
+
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
-    Serial.print(".");
+    Serial.print(F("."));
   }
   Serial.println("");
-  Serial.print("Connected to WiFi at ");
+  Serial.print(F("Connected to WiFi at "));
   Serial.print(WiFi.localIP());
   Serial.println("");
 
@@ -216,10 +216,10 @@ void loop()
 
     // Display the date and time
     Serial.println("");
-    Serial.print("Local date: ");
+    Serial.print(F("Local date: "));
     Serial.print(date);
     Serial.println("");
-    Serial.print("Local time: ");
+    Serial.print(F("Local time: "));
     Serial.print(t);
 
     // Calculate base coordinates of digits, am/pm indicator and seconds indicator
@@ -256,7 +256,7 @@ void loop()
     while (WiFi.status() != WL_CONNECTED)
     {
       delay(500);
-      Serial.print(".");
+      Serial.print(F("."));
     }
 
     // Show connected icon
