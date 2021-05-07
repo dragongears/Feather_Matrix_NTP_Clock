@@ -13,7 +13,7 @@
 //  Adafruit_LEDBackpack.h: https://github.com/adafruit/Adafruit_LED_Backpack
 //  ESP8266WiFi.h & WiFiUdp.h: https://github.com/esp8266/Arduino
 //  NTPClient.h: https://github.com/arduino-libraries/NTPClient
-//  Time.h & TimeLib.h:  https://github.com/PaulStoffregen/Time
+//  TimeLib.h:  https://github.com/PaulStoffregen/Time
 //  Timezone.h: https://github.com/JChristensen/Timezone
 //
 //
@@ -33,7 +33,6 @@
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <NTPClient.h>
-#include <Time.h>
 #include <TimeLib.h>
 #include <Timezone.h>
 
@@ -129,6 +128,11 @@ static const uint8_t PROGMEM // Bitmaps are stored in program memory
     B00000000,
     B00000000 } };
 
+time_t getNtpTime();
+void reconnect();
+void displayTime(time_t);
+void serialTime(time_t);
+
 void setup ()
 {
   Serial.begin(115200);
@@ -145,6 +149,73 @@ void setup ()
   matrix.writeDisplay();
   Serial.println(F("16x8 LED Mini Matrix Setup Complete"));
 
+  reconnect();
+
+  setSyncProvider(getNtpTime);
+  setSyncInterval(300);
+
+}
+
+void loop()
+{
+  time_t local;
+
+  if (WiFi.status() == WL_CONNECTED) //Check WiFi connection status
+  {
+    local = now();
+
+    serialTime(local);
+    displayTime(local);
+  }
+  else // attempt to connect to wifi again if disconnected
+  {
+    reconnect();
+  }
+
+  delay(1000);    //Send a request to update every 1 sec (= 1,000 ms)
+}
+
+void displayTime(time_t local)
+{
+  // Calculate base coordinates of digits, am/pm indicator and seconds indicator
+  uint16_t timeY = isPM(local) ? 1 : 2;
+  uint16_t ampmY = isPM(local) ? 7 : 0;
+  uint16_t secondX = second(local) % 10;
+  secondX = secondX + (secondX > 4 ? 5 : 1);
+
+  // Display the time
+  matrix.clear();
+
+  // Draw the am/pm indicator and turn off the pixel for the second
+  matrix.drawLine(0, ampmY, 6, ampmY, LED_ON);
+  matrix.drawLine(9, ampmY, 15, ampmY, LED_ON);
+  matrix.drawPixel(secondX, ampmY, LED_OFF);
+
+  // Draw the digits
+  if (t[0] != '0') {
+    matrix.drawBitmap(0, timeY, digits[t[0] - '0'], 3, 5, LED_ON);
+  }
+  matrix.drawBitmap(4, timeY, digits[t[1] - '0'], 3, 5, LED_ON);
+  matrix.drawBitmap(9, timeY, digits[t[3] - '0'], 3, 5, LED_ON);
+  matrix.drawBitmap(13, timeY, digits[t[4] - '0'], 3, 5, LED_ON);
+  matrix.writeDisplay();
+}
+
+time_t getNtpTime()
+{
+  // update the NTP client and get the UNIX UTC timestamp
+  timeClient.update();
+  time_t utc =  timeClient.getEpochTime();
+
+  // Then convert the UTC UNIX timestamp to local time
+  TimeChangeRule usEDT = {"EDT", Second, Sun, Mar, 2, -300};  //UTC - 5 hours - change this as needed
+  TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -360};   //UTC - 6 hours - change this as needed
+  Timezone usEastern(usEDT, usEST);
+  return usEastern.toLocal(utc);
+}
+
+void reconnect()
+{
   // Show disconnected icon
   matrix.clear();
   matrix.drawBitmap(4, 0, connect[0], 8, 8, LED_ON);
@@ -161,6 +232,7 @@ void setup ()
     delay(500);
     Serial.print(F("."));
   }
+
   Serial.println("");
   Serial.print(F("Connected to WiFi at "));
   Serial.print(WiFi.localIP());
@@ -173,98 +245,35 @@ void setup ()
   delay(1000);
 }
 
-void loop()
+void serialTime(time_t local)
 {
-  if (WiFi.status() == WL_CONNECTED) //Check WiFi connection status
-  {
-    date = "";  // clear the variables
-    t = "";
+  date = "";  // clear the variables
+  t = "";
+  // Format the Time variables into strings with proper names for month, day etc
+  date += days[weekday(local)-1];
+  date += ", ";
+  date += months[month(local)-1];
+  date += " ";
+  date += day(local);
+  date += ", ";
+  date += year(local);
 
-    // update the NTP client and get the UNIX UTC timestamp
-    timeClient.update();
-    unsigned long epochTime =  timeClient.getEpochTime();
+  // format the time to 12-hour format with AM/PM and no seconds
+  if(hourFormat12(local) < 10)  // add a zero if hour is under 10
+    t += "0";
+  t += hourFormat12(local);
+  t += ":";
+  if(minute(local) < 10)  // add a zero if minute is under 10
+    t += "0";
+  t += minute(local);
+  t += " ";
+  t += ampm[isPM(local)];
 
-    // convert received time stamp to time_t object
-    time_t local, utc;
-    utc = epochTime;
-
-    // Then convert the UTC UNIX timestamp to local time
-    TimeChangeRule usEDT = {"EDT", Second, Sun, Mar, 2, -300};  //UTC - 5 hours - change this as needed
-    TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -360};   //UTC - 6 hours - change this as needed
-    Timezone usEastern(usEDT, usEST);
-    local = usEastern.toLocal(utc);
-
-    // now format the Time variables into strings with proper names for month, day etc
-    date += days[weekday(local)-1];
-    date += ", ";
-    date += months[month(local)-1];
-    date += " ";
-    date += day(local);
-    date += ", ";
-    date += year(local);
-
-    // format the time to 12-hour format with AM/PM and no seconds
-    if(hourFormat12(local) < 10)  // add a zero if hour is under 10
-      t += "0";
-    t += hourFormat12(local);
-    t += ":";
-    if(minute(local) < 10)  // add a zero if minute is under 10
-      t += "0";
-    t += minute(local);
-    t += " ";
-    t += ampm[isPM(local)];
-
-    // Display the date and time
-    Serial.println("");
-    Serial.print(F("Local date: "));
-    Serial.print(date);
-    Serial.println("");
-    Serial.print(F("Local time: "));
-    Serial.print(t);
-
-    // Calculate base coordinates of digits, am/pm indicator and seconds indicator
-    uint16_t timeY = isPM(local) ? 1 : 2;
-    uint16_t ampmY = isPM(local) ? 7 : 0;
-    uint16_t secondX = second(local) % 10;
-    secondX = secondX + (secondX > 4 ? 5 : 1);
-
-    // Display the time
-    matrix.clear();
-
-    // Draw the am/pm indicator and turn off the pixel for the second
-    matrix.drawLine(0, ampmY, 6, ampmY, LED_ON);
-    matrix.drawLine(9, ampmY, 15, ampmY, LED_ON);
-    matrix.drawPixel(secondX, ampmY, LED_OFF);
-
-    // Draw the digits
-    if (t[0] != '0') {
-      matrix.drawBitmap(0, timeY, digits[t[0] - '0'], 3, 5, LED_ON);
-    }
-    matrix.drawBitmap(4, timeY, digits[t[1] - '0'], 3, 5, LED_ON);
-    matrix.drawBitmap(9, timeY, digits[t[3] - '0'], 3, 5, LED_ON);
-    matrix.drawBitmap(13, timeY, digits[t[4] - '0'], 3, 5, LED_ON);
-    matrix.writeDisplay();
-  }
-  else // attempt to connect to wifi again if disconnected
-  {
-    // Show disconnected icon
-    matrix.clear();
-    matrix.drawBitmap(4, 0, connect[0], 8, 8, LED_ON);
-    matrix.writeDisplay();
-
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED)
-    {
-      delay(500);
-      Serial.print(F("."));
-    }
-
-    // Show connected icon
-    matrix.clear();
-    matrix.drawBitmap(4, 0, connect[1], 8, 8, LED_ON);
-    matrix.writeDisplay();
-    delay(1000);
-  }
-
-  delay(1000);    //Send a request to update every 1 sec (= 1,000 ms)
+  // Display the date and time
+  Serial.println("");
+  Serial.print(F("Local date: "));
+  Serial.print(date);
+  Serial.println("");
+  Serial.print(F("Local time: "));
+  Serial.print(t);
 }
