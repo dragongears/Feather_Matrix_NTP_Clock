@@ -1,5 +1,7 @@
 A little clock that gets the time by connecting to the internet over WiFi.
 
+To configure WiFi, connect to "FeatherWingNTPClock" on any device that has a web browser.
+
 [Adafruit Feather HUZZAH with ESP8266](https://www.adafruit.com/product/2821)
 
 [Adafruit 8x16 LED Matrix FeatherWing w/o Matrices](https://www.adafruit.com/product/3090)

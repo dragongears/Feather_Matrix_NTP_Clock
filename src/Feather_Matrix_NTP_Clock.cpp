@@ -36,6 +36,7 @@
 #include <Timezone.h>
 #include <WiFiUdp.h>
 #include "WiFi_Network.h"
+#include <WiFiManager.h>
 
 // Define NTP properties
 #define NTP_OFFSET   60 * 60      // In seconds
@@ -107,7 +108,8 @@ static const uint8_t PROGMEM // Bitmaps are stored in program memory
     B10100000,
     B11100000,
     B00100000,
-    B11100000 } };
+    B11100000 }
+};
 
 // Connection icons bitmaps
 static const uint8_t PROGMEM // Bitmaps are stored in program memory
@@ -217,6 +219,11 @@ time_t getNtpTime()
 
 void reconnect()
 {
+  WiFiManager wm;
+  // wm.resetSettings();
+
+  bool res;
+
   // Show disconnected icon
   matrix.clear();
   matrix.drawBitmap(4, 0, connect[0], 8, 8, LED_ON);
@@ -227,12 +234,19 @@ void reconnect()
   Serial.print(F("Connecting to "));
   Serial.print(ssid);
 
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(F("."));
+  res = wm.autoConnect(ssid);
+
+  if (!res) {
+    Serial.println("Failed to connect");
+    return;
   }
+
+  // WiFi.begin(ssid, password);
+  // while (WiFi.status() != WL_CONNECTED)
+  // {
+  //   delay(500);
+  //   Serial.print(F("."));
+  // }
 
   Serial.println("");
   Serial.print(F("Connected to WiFi at "));
